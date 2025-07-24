@@ -89,7 +89,7 @@ module HasCustomFields
           obj.preloaded_custom_fields = empty.dup
         end
 
-        fk = (name.underscore << "_id")
+        fk = "#{name.underscore}_id"
 
         "#{name}CustomField".constantize.where("#{fk} in (?)", map.keys)
           .pluck(fk, :name, :value).each do |id, name, value|
