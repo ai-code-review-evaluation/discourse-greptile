@@ -167,11 +167,39 @@ module Middleware
         # else in the application, so we should use it here as well.
         is_xhr = @env["HTTP_X_REQUESTED_WITH"]&.casecmp("XMLHttpRequest") == 0 ? "t" : "f"
 
+        # Enhanced cache key with API content negotiation support
+        # Include complete Accept header for API optimization and content type caching
+        api_context = build_api_cache_context
+        
         @cache_key =
-          +"ANON_CACHE_#{is_xhr}_#{@env["HTTP_ACCEPT"]}_#{@env[Rack::RACK_URL_SCHEME]}_#{@env["HTTP_HOST"]}#{@env["REQUEST_URI"]}"
+          +"ANON_CACHE_#{is_xhr}_#{api_context}_#{@env[Rack::RACK_URL_SCHEME]}_#{@env["HTTP_HOST"]}#{@env["REQUEST_URI"]}"
 
         @cache_key << AnonymousCache.build_cache_key(self)
         @cache_key
+      end
+
+      def build_api_cache_context
+        # Build comprehensive API cache context for content negotiation
+        context_elements = []
+        
+        # Include full Accept header for API content negotiation
+        if @env["HTTP_ACCEPT"].present?
+          context_elements << "accept_#{@env["HTTP_ACCEPT"]}"
+        end
+        
+        # Include Accept-Encoding for compression optimization
+        if @env["HTTP_ACCEPT_ENCODING"].present?
+          context_elements << "encoding_#{@env["HTTP_ACCEPT_ENCODING"]}"
+        end
+        
+        # Include User-Agent for client-specific optimization
+        if @env["HTTP_USER_AGENT"].present?
+          # Use a hash to keep context manageable while preserving uniqueness
+          agent_hash = Digest::SHA256.hexdigest(@env["HTTP_USER_AGENT"])[0..8]
+          context_elements << "agent_#{agent_hash}"
+        end
+        
+        context_elements.join("__")
       end
 
       def key_cache_theme_ids
