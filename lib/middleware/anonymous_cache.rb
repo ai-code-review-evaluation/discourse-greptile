@@ -5,6 +5,7 @@ require "crawler_detection"
 require "guardian"
 require "http_language_parser"
 require "http_user_agent_encoder"
+require "content_negotiation"
 
 module Middleware
   class AnonymousCache
@@ -167,8 +168,13 @@ module Middleware
         # else in the application, so we should use it here as well.
         is_xhr = @env["HTTP_X_REQUESTED_WITH"]&.casecmp("XMLHttpRequest") == 0 ? "t" : "f"
 
+        # Enhanced cache key generation with content negotiation support
+        # Include HTTP_ACCEPT for better content type caching and mobile optimization
+        accept_header = @env["HTTP_ACCEPT"] || ""
+        content_type = ContentNegotiation.best_content_type(accept_header)
+        
         @cache_key =
-          +"ANON_CACHE_#{is_xhr}_#{@env["HTTP_ACCEPT"]}_#{@env[Rack::RACK_URL_SCHEME]}_#{@env["HTTP_HOST"]}#{@env["REQUEST_URI"]}"
+          +"ANON_CACHE_#{is_xhr}_#{accept_header}_#{content_type}_#{@env[Rack::RACK_URL_SCHEME]}_#{@env["HTTP_HOST"]}#{@env["REQUEST_URI"]}"
 
         @cache_key << AnonymousCache.build_cache_key(self)
         @cache_key
