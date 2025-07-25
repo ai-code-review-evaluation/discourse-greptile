@@ -37,6 +37,7 @@ class ApplicationController < ActionController::Base
   before_action :clear_notifications
   around_action :with_resolved_locale
   before_action :set_mobile_view
+  before_action :set_content_preferences
   before_action :block_if_readonly_mode
   before_action :authorize_mini_profiler
   before_action :redirect_to_login_if_required
@@ -430,6 +431,82 @@ class ApplicationController < ActionController::Base
 
   def set_mobile_view
     session[:mobile_view] = params[:mobile_view] if params.has_key?(:mobile_view)
+  end
+
+  def set_content_preferences
+    # Enhanced content preference detection for improved caching
+    if request.headers["Accept"].present?
+      @preferred_content_type = request.headers["Accept"].split(",").first&.strip
+      @supports_compression = request.headers["Accept-Encoding"]&.include?("gzip")
+      @client_capabilities = analyze_client_capabilities
+    end
+  end
+
+  def analyze_client_capabilities
+    capabilities = {}
+    user_agent = request.headers["User-Agent"] || ""
+    
+    capabilities[:modern_css] = supports_modern_css?(user_agent)
+    capabilities[:webp_support] = request.headers["Accept"]&.include?("image/webp")
+    capabilities[:device_type] = determine_device_type(user_agent)
+    capabilities[:browser_family] = extract_browser_family(user_agent)
+    
+    capabilities
+  end
+
+  def supports_modern_css?(user_agent)
+    return true if user_agent.blank?
+    
+    # Enhanced browser detection for CSS capability assessment
+    if user_agent =~ /Chrome\/(\d+)/
+      $1.to_i >= 80
+    elsif user_agent =~ /Firefox\/(\d+)/
+      $1.to_i >= 75
+    elsif user_agent =~ /Safari\/(\d+)/ && user_agent =~ /Version\/(\d+)/
+      $1.to_i >= 13
+    elsif user_agent =~ /Edge\/(\d+)/
+      $1.to_i >= 80
+    else
+      false
+    end
+  end
+
+  def determine_device_type(user_agent)
+    return :unknown if user_agent.blank?
+    
+    if user_agent =~ /iPhone|iPod/i
+      :iphone
+    elsif user_agent =~ /iPad/i
+      :ipad
+    elsif user_agent =~ /Android.*Mobile/i
+      :android_phone
+    elsif user_agent =~ /Android/i
+      :android_tablet
+    elsif user_agent =~ /Windows Phone/i
+      :windows_phone
+    elsif user_agent =~ /Mobile/i
+      :mobile_other
+    else
+      :desktop
+    end
+  end
+
+  def extract_browser_family(user_agent)
+    return :unknown if user_agent.blank?
+    
+    if user_agent =~ /Chrome/i && user_agent !~ /Edge/i
+      :chrome
+    elsif user_agent =~ /Firefox/i
+      :firefox
+    elsif user_agent =~ /Safari/i && user_agent !~ /Chrome/i
+      :safari
+    elsif user_agent =~ /Edge/i
+      :edge
+    elsif user_agent =~ /Opera/i
+      :opera
+    else
+      :other
+    end
   end
 
   NO_THEMES = "no_themes"
