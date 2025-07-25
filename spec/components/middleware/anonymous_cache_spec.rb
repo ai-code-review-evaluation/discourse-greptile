@@ -7,7 +7,8 @@ describe Middleware::AnonymousCache::Helper do
     Middleware::AnonymousCache::Helper.new({
       "HTTP_HOST" => "http://test.com",
       "REQUEST_URI" => "/path?bla=1",
-      "REQUEST_METHOD" => "GET"
+      "REQUEST_METHOD" => "GET",
+      "HTTP_ACCEPT" => "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     }.merge(env))
   end
 

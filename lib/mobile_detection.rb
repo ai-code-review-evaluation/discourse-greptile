@@ -1,6 +1,26 @@
 module MobileDetection
+  
+  MOBILE_PATTERNS = [
+    /Mobile/, /webOS/, /Nexus 7/, /Android/, /iPhone/, /iPod/, 
+    /BlackBerry/, /IEMobile/, /Opera Mini/, /Windows Phone/
+  ].freeze
+  
+  TABLET_PATTERNS = [
+    /iPad/, /Tablet/, /Kindle/, /PlayBook/
+  ].freeze
+  
   def self.mobile_device?(user_agent)
-    user_agent =~ /Mobile|webOS|Nexus 7/ && !(user_agent =~ /iPad/)
+    return false unless user_agent
+    
+    # Check for tablet first (tablets are not considered mobile)
+    return false if tablet_device?(user_agent)
+    
+    MOBILE_PATTERNS.any? { |pattern| user_agent =~ pattern }
+  end
+  
+  def self.tablet_device?(user_agent)
+    return false unless user_agent
+    TABLET_PATTERNS.any? { |pattern| user_agent =~ pattern }
   end
 
   # we need this as a reusable chunk that is called from the cache
@@ -14,5 +34,11 @@ module MobileDetection
     else
       mobile_device?(user_agent)
     end
+  end
+  
+  def self.device_type(user_agent)
+    return :tablet if tablet_device?(user_agent)
+    return :mobile if mobile_device?(user_agent)
+    :desktop
   end
 end

@@ -49,8 +49,19 @@ module Middleware
         !!(accept && accept =~ /html/)
       end
 
+      def content_types
+        accept = @env["HTTP_ACCEPT"]
+        return [] unless accept
+        accept.split(',').map(&:strip).map { |ct| ct.split(';').first.strip }
+      end
+
+      def supports_gzip?
+        encoding = @env["HTTP_ACCEPT_ENCODING"]
+        !!(encoding && encoding =~ /gzip/)
+      end
+
       def cache_key
-        @cache_key ||= "ANON_CACHE_#{accept_html?}_#{@env["HTTP_HOST"]}#{@env["REQUEST_URI"]}|m=#{is_mobile?}|c=#{is_crawler?}"
+        @cache_key ||= "ANON_CACHE_#{@env["HTTP_ACCEPT"]}_#{@env["HTTP_HOST"]}#{@env["REQUEST_URI"]}|m=#{is_mobile?}|c=#{is_crawler?}"
       end
 
       def cache_key_body

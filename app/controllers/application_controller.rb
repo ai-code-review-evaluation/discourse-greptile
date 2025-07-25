@@ -7,6 +7,7 @@ require_dependency 'rate_limiter'
 require_dependency 'crawler_detection'
 require_dependency 'json_error'
 require_dependency 'letter_avatar'
+require_dependency 'content_negotiation'
 
 class ApplicationController < ActionController::Base
   include CurrentUser
@@ -206,10 +207,14 @@ class ApplicationController < ActionController::Base
     !current_user.present?
   end
 
-  # Our custom cache method
+  # Our custom cache method with enhanced content negotiation
   def discourse_expires_in(time_length)
     return unless can_cache_content?
     Middleware::AnonymousCache.anon_cache(request.env, time_length)
+  end
+  
+  def negotiate_content_type(available_types = ['text/html', 'application/json'])
+    ContentNegotiation.best_content_type(request.env, available_types)
   end
 
   def fetch_user_from_params(opts=nil)
