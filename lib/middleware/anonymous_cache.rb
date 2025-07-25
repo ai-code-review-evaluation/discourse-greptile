@@ -167,11 +167,37 @@ module Middleware
         # else in the application, so we should use it here as well.
         is_xhr = @env["HTTP_X_REQUESTED_WITH"]&.casecmp("XMLHttpRequest") == 0 ? "t" : "f"
 
+        # Enhanced cache key with client optimization context
+        # Include accept headers for better content type caching and optimization targeting
+        client_context = build_client_context
+        
         @cache_key =
-          +"ANON_CACHE_#{is_xhr}_#{@env["HTTP_ACCEPT"]}_#{@env[Rack::RACK_URL_SCHEME]}_#{@env["HTTP_HOST"]}#{@env["REQUEST_URI"]}"
+          +"ANON_CACHE_#{is_xhr}_#{client_context}_#{@env[Rack::RACK_URL_SCHEME]}_#{@env["HTTP_HOST"]}#{@env["REQUEST_URI"]}"
 
         @cache_key << AnonymousCache.build_cache_key(self)
         @cache_key
+      end
+
+      def build_client_context
+        # Build comprehensive client context for cache differentiation
+        context_parts = []
+        
+        # Include accept header for content negotiation
+        if @env["HTTP_ACCEPT"].present?
+          context_parts << "accept:#{@env["HTTP_ACCEPT"]}"
+        end
+        
+        # Include encoding preferences
+        if @env["HTTP_ACCEPT_ENCODING"].present?
+          context_parts << "enc:#{@env["HTTP_ACCEPT_ENCODING"]}"
+        end
+        
+        # Include language preferences  
+        if @env["HTTP_ACCEPT_LANGUAGE"].present?
+          context_parts << "lang:#{@env["HTTP_ACCEPT_LANGUAGE"]}"
+        end
+        
+        context_parts.join("|")
       end
 
       def key_cache_theme_ids
